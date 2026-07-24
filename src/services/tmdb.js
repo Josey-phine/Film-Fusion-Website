@@ -26,3 +26,16 @@ export const fetchMovieDetails = async (movieId) => {
     return null;
   }
 };
+
+export const fetchSearchMovies = async (query) => {
+  try {
+    const response = await fetch(
+      `${BASE_URL}/search/movie?api_key=${API_KEY}&language=en-US&query=${encodeURIComponent(query)}&page=1`
+    );
+    const data = await response.json();
+    return data.results || [];
+  } catch (error) {
+    console.error("Error searching movies:", error);
+    return [];
+  }
+};
