@@ -39,3 +39,16 @@ export const fetchSearchMovies = async (query) => {
     return [];
   }
 };
+
+export const fetchMoviesByCategory = async (category) => {
+  try {
+    const response = await fetch(
+      `${BASE_URL}/movie/${category}?api_key=${API_KEY}&language=en-US&page=1`
+    );
+    const data = await response.json();
+    return data.results || [];
+  } catch (error) {
+    console.error(`Error fetching ${category} movies:`, error);
+    return [];
+  }
+};

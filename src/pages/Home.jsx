@@ -1,35 +1,55 @@
 import { useEffect, useState, useContext } from 'react';
 import { Link } from 'react-router-dom';
-import { fetchTrendingMovies, fetchSearchMovies, IMAGE_BASE_URL } from '../services/tmdb';
+import { fetchTrendingMovies, fetchSearchMovies, fetchMoviesByCategory, IMAGE_BASE_URL } from '../services/tmdb';
 import { FavoritesContext } from '../context/FavoritesContext';
+
+// Define our categories array for easy rendering
+const CATEGORIES = [
+  { id: 'trending', label: 'Trending' },
+  { id: 'popular', label: 'Popular' },
+  { id: 'top_rated', label: 'Top Rated' },
+  { id: 'upcoming', label: 'Upcoming' }
+];
 
 export default function Home() {
   const [movies, setMovies] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [isSearching, setIsSearching] = useState(false);
+  const [activeCategory, setActiveCategory] = useState('trending');
   
   const { toggleFavorite, isFavorite } = useContext(FavoritesContext);
 
-  const loadTrending = async () => {
+  const loadCategoryMovies = async (categoryId) => {
     setLoading(true);
-    const data = await fetchTrendingMovies();
-    setMovies(data);
     setIsSearching(false);
+    setSearchQuery('');
+    setActiveCategory(categoryId);
+
+    let data;
+    if (categoryId === 'trending') {
+      data = await fetchTrendingMovies();
+    } else {
+      data = await fetchMoviesByCategory(categoryId);
+    }
+    
+    setMovies(data);
     setLoading(false);
   };
 
+  // Initial load
   useEffect(() => {
-    loadTrending();
+    loadCategoryMovies('trending');
   }, []);
 
   const handleSearch = async (e) => {
     e.preventDefault();
     if (!searchQuery.trim()) {
-      loadTrending();
+      loadCategoryMovies('trending');
       return;
     }
     setLoading(true);
+    setActiveCategory(''); // Clear active category highlight while searching
     const data = await fetchSearchMovies(searchQuery);
     setMovies(data);
     setIsSearching(true);
@@ -39,7 +59,7 @@ export default function Home() {
   return (
     <div className="max-w-7xl mx-auto py-4 px-4">
       {/* Search Form */}
-      <form onSubmit={handleSearch} className="mb-8 flex gap-2">
+      <form onSubmit={handleSearch} className="mb-6 flex gap-2">
         <input
           type="text"
           placeholder="Search for movies..."
@@ -55,17 +75,35 @@ export default function Home() {
         </button>
       </form>
 
+      {/* Category Filters */}
+      {!isSearching && (
+        <div className="flex flex-wrap gap-3 mb-8">
+          {CATEGORIES.map((cat) => (
+            <button
+              key={cat.id}
+              onClick={() => loadCategoryMovies(cat.id)}
+              className={`px-4 py-2 rounded-full text-sm font-semibold transition-all-duration-200 hover:scale-105 border ${
+                activeCategory === cat.id
+                  ? 'bg-cyan text-navy border-cyan'
+                  : 'bg-transparent text-slate border-slate/40 hover:border-cyan hover:text-cyan'
+              }`}
+            >
+              {cat.label}
+            </button>
+          ))}
+        </div>
+      )}
+
       {/* Dynamic Header */}
       <div className="flex justify-between items-end mb-6">
-        <h1 className="text-3xl font-bold text-cyan">
-          {isSearching ? `Search Results for "${searchQuery}"` : 'Trending Movies'}
+        <h1 className="text-3xl font-bold text-cyan capitalize">
+          {isSearching ? `Search Results for "${searchQuery}"` : 
+           activeCategory === 'trending' ? 'Trending Movies' : 
+           `${activeCategory.replace('_', ' ')} Movies`}
         </h1>
         {isSearching && (
           <button 
-            onClick={() => {
-              setSearchQuery('');
-              loadTrending();
-            }}
+            onClick={() => loadCategoryMovies('trending')}
             className="text-slate hover:text-white transition-colors text-sm underline"
           >
             Clear Search
@@ -76,7 +114,7 @@ export default function Home() {
       {loading ? (
         <div className="text-center mt-10 text-xl text-slate">Loading...</div>
       ) : movies.length === 0 ? (
-        <div className="text-center mt-10 text-xl text-pink">No movies found for that search.</div>
+        <div className="text-center mt-10 text-xl text-pink">No movies found.</div>
       ) : (
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-6">
           {movies.map((movie) => (
