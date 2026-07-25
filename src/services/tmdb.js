@@ -78,3 +78,28 @@ export const fetchMoviesByGenre = async (genreId) => {
     return [];
   }
 };
+
+export const fetchMovieWithDetails = async (id) => {
+  try {
+    // append_to_response combines multiple endpoints into one call
+    const response = await fetch(
+      `${BASE_URL}/movie/${id}?api_key=${API_KEY}&language=en-US&append_to_response=videos,credits,similar`
+    );
+    return await response.json();
+  } catch (error) {
+    console.error("Error fetching rich movie details:", error);
+    return null;
+  }
+};
+
+export const fetchPersonDetails = async (personId) => {
+  try {
+    const response = await fetch(
+      `${BASE_URL}/person/${personId}?api_key=${API_KEY}&language=en-US&append_to_response=movie_credits`
+    );
+    return await response.json();
+  } catch (error) {
+    console.error("Error fetching person details:", error);
+    return null;
+  }
+};
