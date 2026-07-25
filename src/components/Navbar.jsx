@@ -3,7 +3,9 @@ import { Link } from 'react-router-dom';
 export default function Navbar() {
   return (
     <nav className="bg-navy/90 border-b border-slate/30 sticky top-0 z-50 backdrop-blur-md">
-      <div className="max-w-7xl mx-auto px-4 py-4 flex justify-between items-center">
+      {/* Updated flex container for mobile wrapping */}
+      <div className="max-w-7xl mx-auto px-4 py-3 sm:py-4 flex flex-col sm:flex-row justify-between items-center gap-3 sm:gap-0">
+        
         {/* App Logo / Title */}
         <Link 
           to="/" 
@@ -12,7 +14,7 @@ export default function Navbar() {
           FilmFusion
         </Link>
 
-        {/* Navigation Links with Hover Effects */}
+        {/* Navigation Links */}
         <div className="flex gap-6 items-center font-medium">
           <Link 
             to="/" 

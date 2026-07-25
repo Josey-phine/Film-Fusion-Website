@@ -100,17 +100,17 @@ export default function Home() {
   return (
     <div className="max-w-7xl mx-auto py-4 px-4">
       {/* Search Form */}
-      <form onSubmit={handleSearch} className="mb-6 flex gap-2">
+      <form onSubmit={handleSearch} className="mb-6 flex flex-col sm:flex-row gap-2">
         <input
           type="text"
           placeholder="Search for movies..."
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
-          className="flex-1 px-4 py-3 rounded-lg bg-slate/20 text-white border border-slate/40 focus:outline-none focus:border-amber-400 focus:ring-1 focus:ring-amber-400 transition-colors"
+          className="w-full sm:flex-1 px-4 py-3 rounded-lg bg-slate/20 text-white border border-slate/40 focus:outline-none focus:border-amber-400 focus:ring-1 focus:ring-amber-400 transition-colors"
         />
         <button 
           type="submit"
-          className="px-6 py-3 bg-cyan text-navy font-bold rounded-lg hover:bg-cyan/80 hover:scale-105 transition-all duration-200"
+          className="w-full sm:w-auto px-6 py-3 bg-cyan text-navy font-bold rounded-lg hover:bg-cyan/80 hover:scale-105 transition-all duration-200"
         >
           Search
         </button>
