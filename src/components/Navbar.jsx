@@ -1,4 +1,6 @@
 import { Link } from 'react-router-dom';
+import LoginButton from './LoginButton';
+
 
 export default function Navbar() {
   return (
@@ -29,6 +31,8 @@ export default function Navbar() {
             Favorites <span>❤️</span>
           </Link>
         </div>
+
+        <LoginButton/>
       </div>
     </nav>
   );
