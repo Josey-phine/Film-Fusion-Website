@@ -1,4 +1,7 @@
-import { createContext, useState, useEffect } from 'react';
+import { createContext, useState, useEffect, useContext } from 'react';
+import { db } from '../firebase'; 
+import { doc, getDoc, setDoc } from 'firebase/firestore';
+import { useAuth} from './AuthContext'; 
 
 export const FavoritesContext = createContext();
 
@@ -8,9 +11,45 @@ export function FavoritesProvider({ children }) {
     return savedFavorites ? JSON.parse(savedFavorites) : [];
   });
 
+  const { user } = useAuth();
+
+  // 1. Fetch favorites from Firestore when user logs in
+  useEffect(() => {
+    const fetchUserFavorites = async () => {
+      if (user) {
+        try {
+          const userDocRef = doc(db, 'users', user.uid);
+          const userDoc = await getDoc(userDocRef);
+          if (userDoc.exists() && userDoc.data().favorites) {
+            setFavorites(userDoc.data().favorites);
+          }
+        } catch (error) {
+          console.error("Error fetching favorites from Firestore:", error);
+        }
+      }
+    };
+
+    fetchUserFavorites();
+  }, [user]);
+
+  // 2. Save favorites to localStorage and Firestore whenever they change
   useEffect(() => {
     localStorage.setItem('filmfusion-favorites', JSON.stringify(favorites));
-  }, [favorites]);
+
+    const saveUserFavorites = async () => {
+      if (user) {
+        try {
+          const userDocRef = doc(db, 'users', user.uid);
+          // Using merge: true to avoid overwriting other user fields like watchlist later
+          await setDoc(userDocRef, { favorites }, { merge: true });
+        } catch (error) {
+          console.error("Error saving favorites to Firestore:", error);
+        }
+      }
+    };
+
+    saveUserFavorites();
+  }, [favorites, user]);
 
   const toggleFavorite = (movie) => {
     setFavorites((prevFavorites) => {
