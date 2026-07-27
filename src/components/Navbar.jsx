@@ -30,6 +30,9 @@ export default function Navbar() {
           >
             Favorites <span>❤️</span>
           </Link>
+          <Link to="/watchlist" className="text-white hover:text-cyan font-semibold transition-colors">
+            Watchlist
+          </Link>
         </div>
 
         <LoginButton/>

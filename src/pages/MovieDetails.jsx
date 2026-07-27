@@ -2,23 +2,32 @@ import { useEffect, useState, useContext } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { fetchMovieWithDetails, IMAGE_BASE_URL } from '../services/tmdb';
 import { FavoritesContext } from '../context/FavoritesContext';
+import { useWatchlist } from '../context/WatchlistContext';
+import { useWatchHistory } from '../context/WatchHistoryContext';
 
 export default function MovieDetails() {
   const { id } = useParams();
   const navigate = useNavigate();
   const [movie, setMovie] = useState(null);
   const [loading, setLoading] = useState(true);
-  
+
   const { toggleFavorite, isFavorite } = useContext(FavoritesContext);
+  const { watchlist, addToWatchlist, removeFromWatchlist } = useWatchlist();
+  const { addToHistory } = useWatchHistory();
+
+  const isWatchlisted = watchlist?.some((item) => item.id === movie?.id);
 
   useEffect(() => {
     const getDetails = async () => {
       setLoading(true);
       const data = await fetchMovieWithDetails(id);
       setMovie(data);
+      if (data && data.success !== false) {
+        addToHistory(data);
+      }
       setLoading(false);
       // Ensure the page scrolls to the top when navigating from "Similar Movies"
-      window.scrollTo(0, 0); 
+      window.scrollTo(0, 0);
     };
     getDetails();
   }, [id]);
@@ -35,7 +44,7 @@ export default function MovieDetails() {
   return (
     <div className="max-w-7xl mx-auto py-8 px-4">
       {/* Back Button */}
-      <button 
+      <button
         onClick={() => navigate(-1)}
         className="mb-6 text-slate hover:text-amber-400 transition-colors font-semibold flex items-center gap-2"
       >
@@ -44,28 +53,45 @@ export default function MovieDetails() {
 
       {/* Hero Section */}
       <div className="flex flex-col md:flex-row gap-8 mb-12 bg-slate/10 p-6 rounded-2xl border border-slate/30">
-        <img 
-          src={movie.poster_path ? `${IMAGE_BASE_URL}${movie.poster_path}` : 'https://via.placeholder.com/500x750?text=No+Image'} 
+        <img
+          src={movie.poster_path ? `${IMAGE_BASE_URL}${movie.poster_path}` : 'https://via.placeholder.com/500x750?text=No+Image'}
           alt={movie.title}
           className="w-full md:w-80 rounded-xl shadow-lg object-cover"
         />
+        
         <div className="flex-1">
           <div className="flex justify-between items-start gap-4">
             <h1 className="text-4xl font-bold text-white mb-2">{movie.title}</h1>
-            <button
-              onClick={() => toggleFavorite(movie)}
-              className="p-3 bg-navy rounded-full hover:bg-slate/80 hover:scale-110 transition-all duration-200 text-2xl shadow-lg shadow-cyan/10 border border-slate/40"
-              title="Toggle Favorite"
-            >
-              {isFavorite(movie.id) ? '❤️' : '🤍'}
-            </button>
+            
+            <div className="flex items-center gap-3">
+              <button
+                onClick={() => isWatchlisted ? removeFromWatchlist(movie) : addToWatchlist(movie)}
+                className={`px-4 py-2 rounded-full font-semibold transition-all duration-200 shadow-lg border border-slate/40 flex items-center gap-2 ${
+                  isWatchlisted 
+                    ? 'bg-amber-400 text-slate-900 hover:bg-amber-500' 
+                    : 'bg-slate-800 text-white hover:bg-slate-700'
+                }`}
+                title="Toggle Watchlist"
+              >
+                {isWatchlisted ? '✓ Watchlisted' : '+ Watchlist'}
+              </button>
+
+              <button
+                onClick={() => toggleFavorite(movie)}
+                className="p-3 bg-navy rounded-full hover:bg-slate/80 hover:scale-110 transition-all duration-200 text-2xl shadow-lg shadow-cyan/10 border border-slate/40"
+                title="Toggle Favorite"
+              >
+                {isFavorite(movie.id) ? '❤️' : '🤍'}
+              </button>
+            </div>
+
           </div>
           
           <p className="text-slate text-sm mb-6 font-medium italic">{movie.tagline}</p>
           
           <div className="flex flex-wrap gap-2 mb-6">
             {movie.genres?.map(g => (
-              <span key={g.id} className="px-3 py-1 bg-amber-400/20 text-amber-400 rounded-full text-xs font-semibold border border-amber-400/30">
+              <span key={g.id} className="px-3 py-1 bg-amber-400/20 text-amber-400 rounded text-xs font-semibold border border-amber-400/30">
                 {g.name}
               </span>
             ))}
@@ -88,7 +114,9 @@ export default function MovieDetails() {
             <div>
               <span className="block text-white font-semibold">Director</span>
               {director ? (
-                <Link to={`/person/${director.id}`} className="text-amber-400 hover:underline">{director.name}</Link>
+                <Link to={`/person/${director.id}`} className="text-amber-400 hover:underline">
+                  {director.name}
+                </Link>
               ) : 'Unknown'}
             </div>
           </div>
@@ -118,13 +146,13 @@ export default function MovieDetails() {
           <h2 className="text-2xl font-bold text-white mb-4 border-l-4 border-cyan pl-3">Top Cast</h2>
           <div className="flex overflow-x-auto gap-4 pb-4 scrollbar-hide">
             {topCast.map(actor => (
-              <Link 
-                key={actor.id} 
+              <Link
+                key={actor.id}
                 to={`/person/${actor.id}`}
                 className="min-w-[140px] bg-slate/20 rounded-xl overflow-hidden border border-slate/40 hover:border-amber-400 hover:scale-105 transition-all group"
               >
-                <img 
-                  src={actor.profile_path ? `${IMAGE_BASE_URL}${actor.profile_path}` : 'https://via.placeholder.com/300x450?text=No+Photo'} 
+                <img
+                  src={actor.profile_path ? `${IMAGE_BASE_URL}${actor.profile_path}` : 'https://via.placeholder.com/300x450?text=No+Photo'}
                   alt={actor.name}
                   className="w-full h-48 object-cover"
                 />
@@ -144,13 +172,13 @@ export default function MovieDetails() {
           <h2 className="text-2xl font-bold text-white mb-4 border-l-4 border-cyan pl-3">Similar Movies</h2>
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-4">
             {similarMovies.map(similar => (
-              <Link 
-                key={similar.id} 
+              <Link
+                key={similar.id}
                 to={`/movie/${similar.id}`}
                 className="relative bg-slate/30 rounded-lg overflow-hidden shadow-lg hover:scale-105 hover:shadow-cyan/10 transition-all duration-300 border border-slate/40 group"
               >
-                <img 
-                  src={similar.poster_path ? `${IMAGE_BASE_URL}${similar.poster_path}` : 'https://via.placeholder.com/500x750?text=No+Image'} 
+                <img
+                  src={similar.poster_path ? `${IMAGE_BASE_URL}${similar.poster_path}` : 'https://via.placeholder.com/500x750?text=No+Image'}
                   alt={similar.title}
                   className="w-full h-64 object-cover"
                 />

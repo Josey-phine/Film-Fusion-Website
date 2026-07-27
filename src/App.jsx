@@ -4,6 +4,7 @@ import MovieDetails from './pages/MovieDetails';
 import Favorites from './pages/Favorites';
 import Navbar from './components/Navbar';
 import PersonDetails from './pages/PersonDetails'; 
+import Watchlist from './pages/Watchlist';
 
 function App() {
   return (
@@ -16,6 +17,7 @@ function App() {
             <Route path="/movie/:id" element={<MovieDetails />} />
             <Route path="/favorites" element={<Favorites />} />
             <Route path="/person/:id" element={<PersonDetails />} />
+            <Route path="/watchlist" element={<Watchlist />} />
           </Routes>
         </main>
       </div>
