@@ -4,12 +4,33 @@ import { fetchMovieWithDetails, IMAGE_BASE_URL } from '../services/tmdb';
 import { FavoritesContext } from '../context/FavoritesContext';
 import { useWatchlist } from '../context/WatchlistContext';
 import { useWatchHistory } from '../context/WatchHistoryContext';
+import { useReviews } from '../context/ReviewContext';
+import { useAuth } from '../context/AuthContext'; // Adjust path to your Auth Context if needed
 
 export default function MovieDetails() {
   const { id } = useParams();
   const navigate = useNavigate();
   const [movie, setMovie] = useState(null);
   const [loading, setLoading] = useState(true);
+
+  const { user } = useAuth();
+  const { reviews, fetchMovieReviews, addReview, deleteReview, loading: reviewsLoading } = useReviews();
+  const [rating, setRating] = useState(5);
+  const [reviewText, setReviewText] = useState("");
+
+  useEffect(() => {
+    if (id) {
+      fetchMovieReviews(id);
+    }
+  }, [id]);
+
+  const handleSubmitReview = async (e) => {
+    e.preventDefault();
+    if (!reviewText.trim()) return;
+    await addReview(id, rating, reviewText);
+    setReviewText("");
+    setRating(5);
+  };
 
   const { toggleFavorite, isFavorite } = useContext(FavoritesContext);
   const { watchlist, addToWatchlist, removeFromWatchlist } = useWatchlist();
@@ -26,7 +47,6 @@ export default function MovieDetails() {
         addToHistory(data);
       }
       setLoading(false);
-      // Ensure the page scrolls to the top when navigating from "Similar Movies"
       window.scrollTo(0, 0);
     };
     getDetails();
@@ -35,7 +55,6 @@ export default function MovieDetails() {
   if (loading) return <div className="text-center mt-10 text-xl text-amber-400 animate-pulse">Loading Details...</div>;
   if (!movie || movie.success === false) return <div className="text-center mt-10 text-xl text-pink">Movie not found.</div>;
 
-  // Extract specific data safely
   const trailer = movie.videos?.results?.find(vid => vid.type === 'Trailer' && vid.site === 'YouTube') || movie.videos?.results?.[0];
   const director = movie.credits?.crew?.find(member => member.job === 'Director');
   const topCast = movie.credits?.cast?.slice(0, 10) || [];
@@ -84,7 +103,6 @@ export default function MovieDetails() {
                 {isFavorite(movie.id) ? '❤️' : '🤍'}
               </button>
             </div>
-
           </div>
           
           <p className="text-slate text-sm mb-6 font-medium italic">{movie.tagline}</p>
@@ -166,9 +184,82 @@ export default function MovieDetails() {
         </div>
       )}
 
+      {/* Ratings & Reviews Section */}
+      <div className="mt-12 border-t border-gray-800 pt-8">
+        <h3 className="text-2xl font-bold text-white mb-6">Ratings & Reviews</h3>
+
+        {/* Review Submission Form */}
+        {user ? (
+          <form onSubmit={handleSubmitReview} className="bg-dark/50 border border-gray-800 p-6 rounded-xl mb-8">
+            <h4 className="text-lg font-semibold text-white mb-3">Leave a Review</h4>
+            
+            {/* Star Selector */}
+            <div className="flex items-center gap-2 mb-4">
+              <span className="text-gray-400 text-sm">Rating:</span>
+              {[1, 2, 3, 4, 5].map((star) => (
+                <button
+                  type="button"
+                  key={star}
+                  onClick={() => setRating(star)}
+                  className={`text-xl ${star <= rating ? "text-yellow-400" : "text-gray-600"}`}
+                >
+                  ★
+                </button>
+              ))}
+            </div>
+
+            {/* Review Textarea */}
+            <textarea
+              value={reviewText}
+              onChange={(e) => setReviewText(e.target.value)}
+              placeholder="What did you think of the movie?"
+              rows="3"
+              className="w-full bg-darker border border-gray-700 rounded-lg p-3 text-white focus:outline-none focus:border-cyan mb-4"
+              required
+            />
+
+            <button
+              type="submit"
+              className="bg-cyan text-darker font-bold px-6 py-2 rounded-lg hover:bg-cyan/80 transition-colors"
+            >
+              Submit Review
+            </button>
+          </form>
+        ) : (
+          <p className="text-gray-400 mb-8">Please log in to leave a review.</p>
+        )}
+
+        {/* Reviews List */}
+        <div className="space-y-4">
+          {reviews.length === 0 ? (
+            <p className="text-gray-500">No reviews yet. Be the first to review!</p>
+          ) : (
+            reviews.map((rev) => (
+              <div key={rev.id} className="bg-dark/30 border border-gray-800/60 p-4 rounded-xl">
+                <div className="flex items-center justify-between mb-2">
+                  <div className="flex items-center gap-2">
+                    <span className="font-semibold text-white">{rev.userName}</span>
+                    <span className="text-yellow-400 text-sm">{"★".repeat(rev.rating)}</span>
+                  </div>
+                  {user && user.uid === rev.userId && (
+                    <button
+                      onClick={() => deleteReview(rev.id)}
+                      className="text-xs text-pink hover:text-red-400 transition-colors"
+                    >
+                      Delete
+                    </button>
+                  )}
+                </div>
+                <p className="text-gray-300 text-sm">{rev.reviewText}</p>
+              </div>
+            ))
+          )}
+        </div>
+      </div>
+
       {/* Similar Movies Section */}
       {similarMovies.length > 0 && (
-        <div className="mb-8">
+        <div className="mt-12 mb-8">
           <h2 className="text-2xl font-bold text-white mb-4 border-l-4 border-cyan pl-3">Similar Movies</h2>
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-4">
             {similarMovies.map(similar => (

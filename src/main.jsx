@@ -7,6 +7,7 @@ import './index.css';
 import { AuthProvider } from './context/AuthContext.jsx';
 import { WatchlistProvider } from './context/WatchlistContext.jsx';
 import { WatchHistoryProvider } from './context/WatchHistoryContext.jsx';
+import { ReviewProvider } from './context/ReviewContext.jsx';
 
 createRoot(document.getElementById('root')).render(
   <StrictMode>
@@ -14,7 +15,9 @@ createRoot(document.getElementById('root')).render(
       <FavoritesProvider>
         <WatchlistProvider>
           <WatchHistoryProvider>
+            <ReviewProvider>
           <App />
+            </ReviewProvider>
           </WatchHistoryProvider>
         </WatchlistProvider>
       </FavoritesProvider>
