@@ -5,7 +5,8 @@ import { FavoritesContext } from '../context/FavoritesContext';
 import { useWatchlist } from '../context/WatchlistContext';
 import { useWatchHistory } from '../context/WatchHistoryContext';
 import { useReviews } from '../context/ReviewContext';
-import { useAuth } from '../context/AuthContext'; // Adjust path to your Auth Context if needed
+import { useAuth } from '../context/AuthContext';
+import CommentsSection from "../components/CommentsSection"
 
 export default function MovieDetails() {
   const { id } = useParams();
@@ -256,6 +257,7 @@ export default function MovieDetails() {
           )}
         </div>
       </div>
+      
 
       {/* Similar Movies Section */}
       {similarMovies.length > 0 && (
@@ -281,6 +283,9 @@ export default function MovieDetails() {
           </div>
         </div>
       )}
-    </div>
+      <div className="max-w-6xl mx-auto px-4 py-8">  
+          <CommentsSection movieId={id} />
+        </div>
+     </div>
   );
 }
