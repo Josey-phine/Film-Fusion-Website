@@ -10,6 +10,7 @@ import {
 } from '../services/tmdb';
 import { FavoritesContext } from '../context/FavoritesContext';
 import { useWatchHistory } from '../context/WatchHistoryContext';
+import RecommendedMovies from '../components/RecommendedMovies';
 
 const CATEGORIES = [
   { id: 'trending', label: 'Trending' },
@@ -157,6 +158,13 @@ export default function Home() {
         </div>
       )}
 
+      {/* Recommended Movies Section */}
+      {!isSearching && (
+        <div className="mb-12">
+          <RecommendedMovies />
+        </div>
+      )}
+
       {/* Dynamic Header */}
       <div className="flex justify-between items-end mb-6">
         <h1 className="text-3xl font-bold text-white capitalize">
@@ -220,7 +228,7 @@ export default function Home() {
             >
               Clear All
             </button>
-          </div>s
+          </div>
           
           <div className="flex overflow-x-auto gap-4 pb-4 scrollbar-hide">
             {history.map((movie) => (
