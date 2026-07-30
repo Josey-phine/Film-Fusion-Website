@@ -121,7 +121,7 @@ export default function Home() {
 
       {/* Categories & Genres Filters */}
       {!isSearching && (
-        <div className="flex flex-col gap-4 mb-8">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-8">
           {/* Main Categories (Primary Color: Cyan) */}
           <div className="flex flex-wrap gap-3">
             {CATEGORIES.map((cat) => (
@@ -139,21 +139,29 @@ export default function Home() {
             ))}
           </div>
 
-          {/* Genres (Secondary Color: Amber) */}
-          <div className="flex flex-wrap gap-2 overflow-x-auto pb-2 scrollbar-hide">
-            {genres.map((genre) => (
-              <button
-                key={genre.id}
-                onClick={() => loadGenreMovies(genre.id)}
-                className={`px-3 py-1.5 whitespace-nowrap rounded-full text-xs font-semibold transition-all duration-200 hover:scale-105 border ${
-                  activeGenre === genre.id
-                    ? 'bg-amber-400 text-navy border-amber-400 shadow-md shadow-amber-400/20'
-                    : 'bg-transparent text-slate border-slate/50 hover:border-amber-400 hover:text-amber-400'
-                }`}
-              >
-                {genre.name}
-              </button>
-            ))}
+          {/* Genres Dropdown Menu */}
+          <div className="w-full sm:w-auto">
+            <select
+              onChange={(e) => {
+                const genreId = e.target.value ? Number(e.target.value) : null;
+                if (genreId) {
+                  loadGenreMovies(genreId);
+                } else {
+                  loadCategoryMovies('trending');
+                }
+              }}
+              value={activeGenre || ''}
+              className="w-full sm:w-auto px-4 py-2.5 rounded-xl bg-slate/20 text-white border border-slate/40 focus:outline-none focus:border-amber-400 focus:ring-1 focus:ring-amber-400 transition-colors text-sm font-semibold cursor-pointer"
+            >
+              <option value="" className="bg-slate-900 text-slate">
+                Filter by Genre...
+              </option>
+              {genres.map((genre) => (
+                <option key={genre.id} value={genre.id} className="bg-slate-900 text-white">
+                  {genre.name}
+                </option>
+              ))}
+            </select>
           </div>
         </div>
       )}
