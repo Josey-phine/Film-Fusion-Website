@@ -5,6 +5,8 @@ import Favorites from './pages/Favorites';
 import Navbar from './components/Navbar';
 import PersonDetails from './pages/PersonDetails'; 
 import Watchlist from './pages/Watchlist';
+import BlogList from './pages/BlogList';
+import BlogPost from './pages/BlogPost';
 
 function App() {
   return (
@@ -18,6 +20,8 @@ function App() {
             <Route path="/favorites" element={<Favorites />} />
             <Route path="/person/:id" element={<PersonDetails />} />
             <Route path="/watchlist" element={<Watchlist />} />
+            <Route path="/blog" element={<BlogList />} />
+            <Route path="/blog/:slug" element={<BlogPost />} />
           </Routes>
         </main>
       </div>

@@ -1,16 +1,66 @@
-# React + Vite
+# Film Fusion
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+Film Fusion is a movie-focused web application I am building to practice React and modern frontend development.
 
-Currently, two official plugins are available:
+## About
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+Film Fusion is an interactive movie platform where users can explore movie content and interact with it through features such as favorites and comments.
 
-## React Compiler
+The project is still under development, with additional features planned.
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+## Current Features
 
-## Expanding the ESLint configuration
+- Browse and explore movie content
+- Add movies to favorites
+- User comment sections
+- Store and retrieve data using Firebase Firestore
+- Interactive movie interface
+- Reusable React components
+- Responsive styling with Tailwind CSS
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+## Planned Features
+
+- Blog posts and movie-related articles
+- Additional improvements to the user experience
+- More interactive features
+
+## Technologies Used
+
+- React
+- JavaScript
+- Tailwind CSS
+- Firebase
+- Firestore
+
+## Data & Content
+
+Movie-related information and/or content used in this project is sourced from IMDb.
+
+## What I Learned
+
+Through this project, I have been practicing:
+
+- Building reusable interfaces with React components
+- Creating interactive features with JavaScript
+- Working with Firebase and Firestore
+- Styling interfaces with Tailwind CSS
+- Organizing a larger frontend project
+- Building features that allow users to interact with content
+
+## Project Status
+
+**In Development**
+
+## Preview
+
+### Home
+
+![Film Fusion Home](src/home.png)
+
+### Movie details
+
+![Film Fusion Moviedetails](src/details.png)
+
+### Ratings
+
+![Film Fusion Ratings](src/ratings.png)
