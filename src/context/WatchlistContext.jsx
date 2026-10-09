@@ -1,78 +1,127 @@
 import { createContext, useContext, useState, useEffect } from "react";
 import { db } from "../firebase";
-import { doc, getDoc, updateDoc, arrayUnion, arrayRemove } from "firebase/firestore";
+import { doc, getDoc, setDoc } from "firebase/firestore";
 import { useAuth } from "./AuthContext";
 
 const WatchlistContext = createContext();
 
 export function WatchlistProvider({ children }) {
-  const [watchlist, setWatchlist] = useState(() => {
-    const savedWatchlist = localStorage.getItem("filmfusion-watchlist");
-    return savedWatchlist ? JSON.parse(savedWatchlist) : [];
-  });
+  const [watchlist, setWatchlist] = useState([]);
+  const [loadedFor, setLoadedFor] = useState(null);
 
   const { user } = useAuth();
 
-  // 1. Fetch watchlist from Firestore when user logs in
+  const storageKey = user
+    ? `filmfusion-watchlist-${user.uid}`
+    : "filmfusion-watchlist-guest";
+
   useEffect(() => {
-    const fetchWatchlist = async () => {
-      if (user) {
-        try {
-          const userDocRef = doc(db, "users", user.uid);
-          const userDoc = await getDoc(userDocRef);
-          if (userDoc.exists() && userDoc.data().watchlist) {
-            setWatchlist(userDoc.data().watchlist);
+    let cancelled = false;
+
+    async function loadWatchlist() {
+      try {
+        if (!user) {
+          const saved = localStorage.getItem(storageKey);
+          const guestWatchlist = saved ? JSON.parse(saved) : [];
+
+          if (!cancelled) {
+            setWatchlist(guestWatchlist);
+            setLoadedFor(storageKey);
           }
-        } catch (error) {
-          console.error("Error fetching watchlist:", error);
+
+          return;
+        }
+
+        const userDocRef = doc(db, "users", user.uid);
+        const userDoc = await getDoc(userDocRef);
+
+        let loadedWatchlist;
+
+        if (userDoc.exists()) {
+          loadedWatchlist = userDoc.data().watchlist || [];
+        } else {
+          const saved = localStorage.getItem(storageKey);
+          loadedWatchlist = saved ? JSON.parse(saved) : [];
+        }
+
+        if (!cancelled) {
+          setWatchlist(loadedWatchlist);
+
+          localStorage.setItem(
+            storageKey,
+            JSON.stringify(loadedWatchlist)
+          );
+
+          setLoadedFor(storageKey);
+        }
+      } catch (error) {
+        console.error("Error loading watchlist:", error);
+
+        if (!cancelled) {
+          const saved = localStorage.getItem(storageKey);
+          const cachedWatchlist = saved ? JSON.parse(saved) : [];
+
+          setWatchlist(cachedWatchlist);
+          setLoadedFor(storageKey);
         }
       }
+    }
+
+    loadWatchlist();
+
+    return () => {
+      cancelled = true;
     };
-    fetchWatchlist();
-  }, [user]);
+  }, [user, storageKey]);
 
-  // 2. Save to localStorage as a fallback/cache
   useEffect(() => {
-    localStorage.setItem("filmfusion-watchlist", JSON.stringify(watchlist));
-  }, [watchlist]);
+    if (loadedFor !== storageKey) return;
 
-  const addToWatchlist = async (movie) => {
-    // Prevent duplicates
-    if (watchlist.some((item) => item.id === movie.id)) return;
+    localStorage.setItem(storageKey, JSON.stringify(watchlist));
 
-    const updatedWatchlist = [...watchlist, movie];
-    setWatchlist(updatedWatchlist);
+    if (!user) return;
 
-    if (user) {
+    async function saveWatchlist() {
       try {
-        const userDocRef = doc(db, "users", user.uid);
-        await updateDoc(userDocRef, {
-          watchlist: arrayUnion(movie),
-        });
+        await setDoc(
+          doc(db, "users", user.uid),
+          { watchlist },
+          { merge: true }
+        );
       } catch (error) {
-        console.error("Error adding to watchlist in Firestore:", error);
+        console.error("Error saving watchlist:", error);
       }
     }
-  };
 
-  const removeFromWatchlist = async (movie) => {
-    const updatedWatchlist = watchlist.filter((item) => item.id !== movie.id);
-    setWatchlist(updatedWatchlist);
+    saveWatchlist();
+  }, [watchlist, user, storageKey, loadedFor]);
 
-    if (user) {
-      try {
-        const userDocRef = doc(db, "users", user.uid);
-        await updateDoc(userDocRef, {
-          watchlist: arrayRemove(movie),
-        });
-      } catch (error) {
-        console.error("Error removing from watchlist in Firestore:", error);
-      }
-    }
-  };
+  function addToWatchlist(movie) {
+    setWatchlist((previous) => {
+      const alreadyExists = previous.some(
+        (item) => item.id === movie.id
+      );
+
+      if (alreadyExists) return previous;
+
+      return [...previous, movie];
+    });
+  }
+
+  function removeFromWatchlist(movie) {
+    setWatchlist((previous) =>
+      previous.filter((item) => item.id !== movie.id)
+    );
+  }
 
   return (
-    <WatchlistContext.Provider value={{ watchlist, addToWatchlist, removeFromWatchlist }}>
+    <WatchlistContext.Provider
+      value={{
+        watchlist,
+        addToWatchlist,
+        removeFromWatchlist,
+      }}
+    >
       {children}
     </WatchlistContext.Provider>
   );

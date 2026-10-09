@@ -1,74 +1,131 @@
-import { createContext, useState, useEffect, useContext } from 'react';
-import { db } from '../firebase'; 
-import { doc, getDoc, setDoc } from 'firebase/firestore';
-import { useAuth} from './AuthContext'; 
+import { createContext, useState, useEffect, useContext } from "react";
+import { db } from "../firebase";
+import { doc, getDoc, setDoc } from "firebase/firestore";
+import { useAuth } from "./AuthContext";
 
 export const FavoritesContext = createContext();
 
 export function FavoritesProvider({ children }) {
-  const [favorites, setFavorites] = useState(() => {
-    const savedFavorites = localStorage.getItem('filmfusion-favorites');
-    return savedFavorites ? JSON.parse(savedFavorites) : [];
-  });
+  const [favorites, setFavorites] = useState([]);
+  const [loadedFor, setLoadedFor] = useState(null);
 
   const { user } = useAuth();
 
-  // 1. Fetch favorites from Firestore when user logs in
+  const storageKey = user
+    ? `filmfusion-favorites-${user.uid}`
+    : "filmfusion-favorites-guest";
+
   useEffect(() => {
-    const fetchUserFavorites = async () => {
-      if (user) {
-        try {
-          const userDocRef = doc(db, 'users', user.uid);
-          const userDoc = await getDoc(userDocRef);
-          if (userDoc.exists() && userDoc.data().favorites) {
-            setFavorites(userDoc.data().favorites);
+    let cancelled = false;
+
+    async function loadFavorites() {
+      try {
+        if (!user) {
+          const saved = localStorage.getItem(storageKey);
+          const guestFavorites = saved ? JSON.parse(saved) : [];
+
+          if (!cancelled) {
+            setFavorites(guestFavorites);
+            setLoadedFor(storageKey);
           }
-        } catch (error) {
-          console.error("Error fetching favorites from Firestore:", error);
+
+          return;
+        }
+
+        const userDocRef = doc(db, "users", user.uid);
+        const userDoc = await getDoc(userDocRef);
+
+        let loadedFavorites;
+
+        if (userDoc.exists()) {
+          loadedFavorites = userDoc.data().favorites || [];
+        } else {
+          const saved = localStorage.getItem(storageKey);
+          loadedFavorites = saved ? JSON.parse(saved) : [];
+        }
+
+        if (!cancelled) {
+          setFavorites(loadedFavorites);
+
+          localStorage.setItem(
+            storageKey,
+            JSON.stringify(loadedFavorites)
+          );
+
+          setLoadedFor(storageKey);
+        }
+      } catch (error) {
+        console.error("Error loading favorites:", error);
+
+        if (!cancelled) {
+          const saved = localStorage.getItem(storageKey);
+          const cachedFavorites = saved ? JSON.parse(saved) : [];
+
+          setFavorites(cachedFavorites);
+          setLoadedFor(storageKey);
         }
       }
+    }
+
+    loadFavorites();
+
+    return () => {
+      cancelled = true;
     };
+  }, [user, storageKey]);
 
-    fetchUserFavorites();
-  }, [user]);
-
-  // 2. Save favorites to localStorage and Firestore whenever they change
   useEffect(() => {
-    localStorage.setItem('filmfusion-favorites', JSON.stringify(favorites));
+    // Never save data until it has loaded for the current account.
+    if (loadedFor !== storageKey) return;
 
-    const saveUserFavorites = async () => {
-      if (user) {
-        try {
-          const userDocRef = doc(db, 'users', user.uid);
-          // Using merge: true to avoid overwriting other user fields like watchlist later
-          await setDoc(userDocRef, { favorites }, { merge: true });
-        } catch (error) {
-          console.error("Error saving favorites to Firestore:", error);
-        }
+    localStorage.setItem(storageKey, JSON.stringify(favorites));
+
+    if (!user) return;
+
+    async function saveFavorites() {
+      try {
+        await setDoc(
+          doc(db, "users", user.uid),
+          { favorites },
+          { merge: true }
+        );
+      } catch (error) {
+        console.error("Error saving favorites:", error);
       }
-    };
+    }
 
-    saveUserFavorites();
-  }, [favorites, user]);
+    saveFavorites();
+  }, [favorites, user, storageKey, loadedFor]);
 
-  const toggleFavorite = (movie) => {
-    setFavorites((prevFavorites) => {
-      const isFavorited = prevFavorites.some((fav) => fav.id === movie.id);
-      if (isFavorited) {
-        return prevFavorites.filter((fav) => fav.id !== movie.id);
-      } else {
-        return [...prevFavorites, movie];
+  function toggleFavorite(movie) {
+    setFavorites((previous) => {
+      const alreadyFavorite = previous.some(
+        (favorite) => favorite.id === movie.id
+      );
+
+      if (alreadyFavorite) {
+        return previous.filter(
+          (favorite) => favorite.id !== movie.id
+        );
       }
+
+      return [...previous, movie];
     });
-  };
+  }
 
-  const isFavorite = (movieId) => {
-    return favorites.some((fav) => fav.id === movieId);
-  };
+  function isFavorite(movieId) {
+    return favorites.some((movie) => movie.id === movieId);
+  }
 
   return (
-    <FavoritesContext.Provider value={{ favorites, toggleFavorite, isFavorite }}>
+    <FavoritesContext.Provider
+      value={{ favorites, toggleFavorite, isFavorite }}
+    >
       {children}
     </FavoritesContext.Provider>
   );
+}
+
+export function useFavorites() {
+  return useContext(FavoritesContext);
 }

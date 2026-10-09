@@ -1,99 +1,152 @@
 import { createContext, useContext, useState, useEffect } from "react";
 import { db } from "../firebase";
-import { doc, getDoc, updateDoc, arrayUnion, arrayRemove } from "firebase/firestore";
+import { doc, getDoc, setDoc } from "firebase/firestore";
 import { useAuth } from "./AuthContext";
 
 const WatchHistoryContext = createContext();
 
 export function WatchHistoryProvider({ children }) {
-  const [history, setHistory] = useState(() => {
-    const savedHistory = localStorage.getItem("filmfusion-history");
-    return savedHistory ? JSON.parse(savedHistory) : [];
-  });
+const [history, setHistory] = useState([]);
+const [loadedFor, setLoadedFor] = useState(null);
 
-  const { user } = useAuth();
+const { user } = useAuth();
 
-  // 1. Fetch history from Firestore when user logs in
-  useEffect(() => {
-    const fetchHistory = async () => {
-      if (user) {
-        try {
-          const userDocRef = doc(db, "users", user.uid);
-          const userDoc = await getDoc(userDocRef);
-          if (userDoc.exists() && userDoc.data().history) {
-            setHistory(userDoc.data().history);
-          }
-        } catch (error) {
-          console.error("Error fetching history:", error);
-        }
+const storageKey = user
+? `filmfusion-history-${user.uid}`
+: "filmfusion-history-guest";
+
+useEffect(() => {
+let cancelled = false;
+
+
+async function loadHistory() {
+  try {
+    if (!user) {
+      const saved = localStorage.getItem(storageKey);
+      const guestHistory = saved ? JSON.parse(saved) : [];
+
+      if (!cancelled) {
+        setHistory(guestHistory);
+        setLoadedFor(storageKey);
       }
-    };
-    fetchHistory();
-  }, [user]);
 
-  // 2. Save to localStorage as a fallback/cache
-  useEffect(() => {
-    localStorage.setItem("filmfusion-history", JSON.stringify(history));
-  }, [history]);
-
-  const addToHistory = async (movie) => {
-    // Prevent duplicates from cluttering the history
-    if (history.some((item) => item.id === movie.id)) return;
-
-    const updatedHistory = [movie, ...history];
-    setHistory(updatedHistory);
-
-    if (user) {
-      try {
-        const userDocRef = doc(db, "users", user.uid);
-        await updateDoc(userDocRef, {
-          history: arrayUnion(movie),
-        });
-      } catch (error) {
-        console.error("Error adding to history in Firestore:", error);
-      }
+      return;
     }
-  };
 
-  const removeFromHistory = async (movie) => {
-    // 1. Update local React state instantly
-    const updatedHistory = history.filter((item) => item.id !== movie.id);
-    setHistory(updatedHistory);
+    const userDocRef = doc(db, "users", user.uid);
+    const userDoc = await getDoc(userDocRef);
 
-    // 2. Update Firebase
-    if (user) {
-      try {
-        const userDocRef = doc(db, "users", user.uid);
-        await updateDoc(userDocRef, {
-          history: arrayRemove(movie),
-        });
-      } catch (error) {
-        console.error("Error removing from history:", error);
-      }
+    let loadedHistory;
+
+    if (userDoc.exists()) {
+      loadedHistory = userDoc.data().history || [];
+    } else {
+      const saved = localStorage.getItem(storageKey);
+      loadedHistory = saved ? JSON.parse(saved) : [];
     }
-  };
 
-  const clearHistory = async () => {
-    setHistory([]);
-    if (user) {
-      try {
-        const userDocRef = doc(db, "users", user.uid);
-        await updateDoc(userDocRef, {
-          history: [],
-        });
-      } catch (error) {
-        console.error("Error clearing history:", error);
-      }
+    if (!cancelled) {
+      setHistory(loadedHistory);
+
+      localStorage.setItem(
+        storageKey,
+        JSON.stringify(loadedHistory)
+      );
+
+      setLoadedFor(storageKey);
     }
-  };
+  } catch (error) {
+    console.error("Error loading watch history:", error);
 
-  return (
-    <WatchHistoryContext.Provider value={{ history, addToHistory, removeFromHistory, clearHistory }}>
-      {children}
-    </WatchHistoryContext.Provider>
+    if (!cancelled) {
+      const saved = localStorage.getItem(storageKey);
+      const cachedHistory = saved ? JSON.parse(saved) : [];
+
+      setHistory(cachedHistory);
+      setLoadedFor(storageKey);
+    }
+  }
+}
+
+loadHistory();
+
+return () => {
+  cancelled = true;
+};
+
+
+}, [user, storageKey]);
+
+useEffect(() => {
+if (loadedFor !== storageKey) return;
+
+
+localStorage.setItem(storageKey, JSON.stringify(history));
+
+if (!user) return;
+
+async function saveHistory() {
+  try {
+    await setDoc(
+      doc(db, "users", user.uid),
+      { history },
+      { merge: true }
+    );
+  } catch (error) {
+    console.error("Error saving watch history:", error);
+  }
+}
+
+saveHistory();
+
+
+}, [history, user, storageKey, loadedFor]);
+
+function addToHistory(movie) {
+setHistory((previous) => {
+const existingIndex = previous.findIndex(
+(item) => item.id === movie.id
+);
+
+
+  if (existingIndex === 0) {
+    return previous;
+  }
+
+  const updatedHistory = previous.filter(
+    (item) => item.id !== movie.id
   );
+
+  return [movie, ...updatedHistory];
+});
+
+
+}
+
+function removeFromHistory(movie) {
+setHistory((previous) =>
+previous.filter((item) => item.id !== movie.id)
+);
+}
+
+function clearHistory() {
+setHistory([]);
+}
+
+return (
+<WatchHistoryContext.Provider
+value={{
+history,
+addToHistory,
+removeFromHistory,
+clearHistory,
+}}
+>
+{children}
+</WatchHistoryContext.Provider>
+);
 }
 
 export function useWatchHistory() {
-  return useContext(WatchHistoryContext);
+return useContext(WatchHistoryContext);
 }
